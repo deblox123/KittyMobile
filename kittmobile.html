@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>KittMobile Browser</title>
+  <style>
+    :root {
+      --bg-main: #18191c;
+      --bg-bar: #2b2d31;
+      --bg-tab: #202225;
+      --bg-tab-bar: #111214;
+      --text-main: #f2f3f5;
+      --text-muted: #949ba4;
+      --accent: #ff8c42;
+      --border: #3f4147;
+    }
+
+    body.light-theme {
+      --bg-main: #ffffff;
+      --bg-bar: #f2f3f5;
+      --bg-tab: #e3e5e8;
+      --bg-tab-bar: #d4d7dc;
+      --text-main: #060607;
+      --text-muted: #4e5058;
+      --accent: #e66a1c;
+      --border: #c7ccd1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    body { background: var(--bg-main); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    .tab-bar { display: flex; align-items: center; background: var(--bg-tab-bar); padding: 6px 8px 0; gap: 4px; overflow-x: auto; }
+    .tab { display: flex; align-items: center; justify-content: space-between; background: var(--bg-tab); color: var(--text-muted); padding: 7px 12px; border-radius: 8px 8px 0 0; min-width: 140px; max-width: 200px; font-size: 13px; cursor: pointer; user-select: none; gap: 6px; }
+    .tab.active { background: var(--bg-bar); color: var(--text-main); font-weight: 600; }
+    .tab-icon { width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0; object-fit: cover; }
+    .tab-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+    .close-tab { background: none; border: none; color: inherit; cursor: pointer; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
+    .close-tab:hover { background: rgba(128,128,128,0.3); }
+    .new-tab-btn { background: none; border: none; color: var(--text-main); font-size: 18px; padding: 4px 10px; cursor: pointer; border-radius: 4px; }
+    .new-tab-btn:hover { background: rgba(128,128,128,0.2); }
+
+    .toolbar { display: flex; align-items: center; background: var(--bg-bar); padding: 8px 12px; gap: 6px; border-bottom: 1px solid var(--border); }
+    .nav-btn { background: none; border: none; color: var(--text-main); font-size: 15px; padding: 6px 8px; border-radius: 50%; cursor: pointer; }
+    .nav-btn:hover:not(:disabled) { background: rgba(128,128,128,0.2); }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+
+    .address-bar { flex: 1; display: flex; align-items: center; background: var(--bg-main); border-radius: 20px; padding: 6px 14px; border: 1px solid var(--border); gap: 8px; }
+    .address-bar:focus-within { border-color: var(--accent); }
+    .address-bar input { width: 100%; background: none; border: none; color: var(--text-main); font-size: 14px; outline: none; }
+
+    .bookmarks-bar { display: flex; align-items: center; background: var(--bg-bar); padding: 5px 12px; gap: 8px; font-size: 12px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+    .bm-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-tab); color: var(--text-main); border: 1px solid transparent; padding: 4px 10px; border-radius: 12px; cursor: pointer; white-space: nowrap; font-size: 12px; }
+    .bm-btn:hover { border-color: var(--accent); }
+    .bm-btn img { width: 14px; height: 14px; border-radius: 3px; object-fit: cover; }
+
+    .viewport { flex: 1; overflow-y: auto; position: relative; display: flex; flex-direction: column; }
+    .center-box { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 20px; text-align: center; }
+
+    .kitt-brand { display: flex; flex-direction: column; align-items: center; margin-bottom: 22px; user-select: none; }
+    .kitt-title { font-size: 46px; font-weight: 800; letter-spacing: -1px; margin-top: 10px; }
+    .kitt-title span { color: var(--accent); }
+
+    .search-input-wrap { display: flex; width: 100%; max-width: 560px; background: var(--bg-bar); border: 1px solid var(--border); border-radius: 24px; padding: 11px 18px; margin-bottom: 18px; }
+    .search-input-wrap:focus-within { border-color: var(--accent); }
+    .search-input-wrap input { flex: 1; background: none; border: none; color: var(--text-main); font-size: 16px; outline: none; }
+
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .action-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-bar); color: var(--text-main); border: 1px solid var(--border); padding: 9px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .action-btn:hover { border-color: var(--accent); }
+    .action-btn.primary { background: var(--accent); color: #111; border-color: var(--accent); }
+
+    .page-container { max-width: 820px; width: 100%; margin: 0 auto; padding: 24px; }
+    .card { background: var(--bg-bar); border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 14px; }
+    .link { color: var(--accent); text-decoration: none; font-size: 18px; font-weight: bold; display: inline-block; margin-bottom: 4px; cursor: pointer; }
+    .link:hover { text-decoration: underline; }
+
+    .embed-wrapper { display: flex; flex-direction: column; flex: 1; height: 100%; }
+    .embed-banner { background: var(--bg-tab); padding: 6px 14px; font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    .embed-frame { flex: 1; width: 100%; border: none; background: #000; }
+  </style>
+</head>
+<body>
+
+  <div class="tab-bar" id="tabBar"></div>
+
+  <div class="toolbar">
+    <button class="nav-btn" id="btnBack" onclick="goBack()" title="Back">←</button>
+    <button class="nav-btn" id="btnForward" onclick="goForward()" title="Forward">→</button>
+    <button class="nav-btn" onclick="render()" title="Reload">↻</button>
+    <button class="nav-btn" onclick="navigateTo('kitt://home')" title="KittMobile Home">⌂</button>
+    <div class="address-bar">
+      <input type="text" id="urlInput" placeholder="Search KittMobile or type deblox.puter.site..." onkeydown="if(event.key==='Enter') navigateTo(this.value)">
+    </div>
+    <button class="nav-btn" onclick="openExternal()" title="Open in Real Browser Tab">↗</button>
+    <button class="nav-btn" onclick="bookmarkCurrent()" title="Bookmark">★</button>
+    <button class="nav-btn" onclick="navigateTo('kitt://settings')" title="Settings">🔧</button>
+  </div>
+
+  <div class="bookmarks-bar" id="bookmarksBar"></div>
+
+  <div class="viewport" id="viewport"></div>
+
+  <script>
+    const DEBLOX_ICON = "";
+    const DEBLOX_URL = "https://deblox.puter.site";
+
+    const KITTMOBILE_SVG = `
+      <svg width="76" height="76" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="kittGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ff9f43"/>
+            <stop offset="100%" stop-color="#ee5253"/>
+          </linearGradient>
+        </defs>
+        <polygon points="18,45 14,12 42,28" fill="url(#kittGrad)"/>
+        <polygon points="82,45 86,12 58,28" fill="url(#kittGrad)"/>
+        <polygon points="22,40 19,20 37,30" fill="#ffeaa7"/>
+        <polygon points="78,40 81,20 63,30" fill="#ffeaa7"/>
+        <circle cx="50" cy="54" r="36" fill="url(#kittGrad)"/>
+        <circle cx="37" cy="50" r="5" fill="#18191c"/>
+        <circle cx="63" cy="50" r="5" fill="#18191c"/>
+        <circle cx="38.5" cy="48.5" r="1.8" fill="#ffffff"/>
+        <circle cx="64.5" cy="48.5" r="1.8" fill="#ffffff"/>
+        <polygon points="46,58 54,58 50,63" fill="#18191c"/>
+        <path d="M 42 66 Q 50 72 58 66" stroke="#18191c" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <line x1="16" y1="56" x2="29" y2="58" stroke="#18191c" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="84" y1="56" x2="71" y2="58" stroke="#18191c" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>`;
+
+    const KITTMOBILE_ICON_URI = "data:image/svg+xml;utf8," + encodeURIComponent(KITTMOBILE_SVG);
+
+    let tabs = [];
+    let activeTabId = null;
+    let searchEngine = localStorage.getItem("kitt_engine") || "https://www.google.com/search?q=";
+    let uploadedFiles = [];
+    let bookmarks = JSON.parse(localStorage.getItem("kitt_bookmarks")) || [
+      { name: "KittMobile Home", url: "kitt://home", icon: KITTMOBILE_ICON_URI },
+      { name: "Deblox (Live)", url: DEBLOX_URL, icon: DEBLOX_ICON },
+      { name: "YouTube", url: "kitt://youtube", icon: "" },
+      { name: "My Files", url: "kitt://files", icon: "" }
+    ];
+
+    if (localStorage.getItem("kitt_theme") === "light") {
+      document.body.classList.add("light-theme");
+    }
+
+    function saveState() {
+      localStorage.setItem("kitt_bookmarks", JSON.stringify(bookmarks));
+      localStorage.setItem("kitt_engine", searchEngine);
+    }
+
+    function createTab(url = "kitt://home") {
+      const id = Date.now() + Math.random();
+      tabs.push({ id, title: "KittMobile", icon: KITTMOBILE_ICON_URI, history: [url], index: 0 });
+      activeTabId = id;
+      render();
+    }
+
+    function closeTab(e, id) {
+      e.stopPropagation();
+      if (tabs.length === 1) return navigateTo("kitt://home");
+      const idx = tabs.findIndex(t => t.id === id);
+      tabs.splice(idx, 1);
+      if (activeTabId === id) activeTabId = tabs[Math.max(0, idx - 1)].id;
+      render();
+    }
+
+    function getTab() {
+      return tabs.find(t => t.id === activeTabId);
+    }
+
+    function extractYouTubeId(str) {
+      const reg = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      const m = str.match(reg);
+      if (m) return m[1];
+      if (/^[a-zA-Z0-9_-]{11}$/.test(str.trim())) return str.trim();
+      return null;
+    }
+
+    function navigateTo(raw) {
+      const tab = getTab();
+      let url = raw.trim();
+      if (!url) return;
+
+      if (url.toLowerCase() === "deblox" || url.toLowerCase() === "deblox.puter.site") {
+        url = DEBLOX_URL;
+      } else if (extractYouTubeId(url)) {
+        url = "kitt://youtube?v=" + extractYouTubeId(url);
+      } else if (!url.startsWith("kitt://") && !url.startsWith("http://") && !url.startsWith("https://")) {
+        url = (url.includes(".") && !url.includes(" "))
+          ? "https://" + url
+          : "kitt://search?q=" + encodeURIComponent(url);
+      }
+
+      tab.history = tab.history.slice(0, tab.index + 1);
+      tab.history.push(url);
+      tab.index++;
+      render();
+    }
+
+    function goBack() {
+      const tab = getTab();
+      if (tab.index > 0) { tab.index--; render(); }
+    }
+
+    function goForward() {
+      const tab = getTab();
+      if (tab.index < tab.history.length - 1) { tab.index++; render(); }
+    }
+
+    function openExternal() {
+      const url = getTab().history[getTab().index];
+      if (url.startsWith("kitt://search?q=")) {
+        window.open(searchEngine + url.split("q=")[1], "_blank");
+      } else if (url.startsWith("kitt://youtube?v=")) {
+        window.open("https://www.youtube.com/watch?v=" + url.split("v=")[1], "_blank");
+      } else if (url.startsWith("http")) {
+        window.open(url, "_blank");
+      } else {
+        window.open(DEBLOX_URL, "_blank");
+      }
+    }
+
+    function bookmarkCurrent() {
+      const tab = getTab();
+      const url = tab.history[tab.index];
+      if (!bookmarks.some(b => b.url === url)) {
+        bookmarks.push({ name: tab.title, url, icon: tab.icon });
+        saveState();
+        renderBookmarks();
+      }
+    }
+
+    function renderBookmarks() {
+      document.getElementById("bookmarksBar").innerHTML = bookmarks.map(b => {
+        const imgTag = b.icon ? `<img src="${b.icon}" alt="">` : "";
+        return `<button class="bm-btn" onclick="navigateTo('${b.url}')">${imgTag}${b.name}</button>`;
+      }).join("");
+    }
+
+    function handleFiles(e) {
+      for (const file of e.target.files) {
+        uploadedFiles.push({
+          name: file.name,
+          size: (file.size / 1024).toFixed(1) + " KB",
+          url: URL.createObjectURL(file)
+        });
+      }
+      render();
+    }
+
+    function render() {
+      const tab = getTab();
+      const url = tab.history[tab.index];
+
+      document.getElementById("btnBack").disabled = tab.index === 0;
+      document.getElementById("btnForward").disabled = tab.index === tab.history.length - 1;
+      document.getElementById("urlInput").value = url === "kitt://home" ? "" : url;
+
+      const view = document.getElementById("viewport");
+
+      if (url === "kitt://home") {
+        tab.title = "KittMobile";
+        tab.icon = KITTMOBILE_ICON_URI;
+        view.innerHTML = `
+          <div class="center-box">
+            <div class="kitt-brand">
+              ${KITTMOBILE_SVG}
+              <div class="kitt-title">Kitt<span>Mobile</span></div>
+            </div>
+            <div class="search-input-wrap">
+              <input type="text" id="homeInput" placeholder="Search KittMobile or type deblox.puter.site..." onkeydown="if(event.key==='Enter') navigateTo(this.value)">
+            </div>
+            <div class="btn-row">
+              <button class="action-btn primary" onclick="navigateTo(document.getElementById('homeInput').value)">KittSearch</button>
+              <button class="action-btn" onclick="navigateTo(DEBLOX_URL)">
+                <img src="${DEBLOX_ICON}" style="width:18px;height:18px;border-radius:4px;"> Launch Deblox
+              </button>
+              <button class="action-btn" onclick="navigateTo('kitt://youtube')">▶ YouTube</button>
+              <button class="action-btn" onclick="navigateTo('kitt://files')">📁 My Files</button>
+            </div>
+          </div>`;
+      } else if (url.startsWith("kitt://search?q=")) {
+        const q = decodeURIComponent(url.split("q=")[1]);
+        tab.title = q + " - KittMobile";
+        tab.icon = KITTMOBILE_ICON_URI;
+
+        const isDebloxQuery = q.toLowerCase().includes("deblox");
+        const debloxCard = isDebloxQuery ? `
+          <div class="card" style="border-color: var(--accent); display:flex; align-items:center; gap:14px;">
+            <img src="${DEBLOX_ICON}" style="width:48px;height:48px;border-radius:8px;">
+            <div>
+              <a class="link" onclick="navigateTo(DEBLOX_URL)">Deblox — Live 3D Platform (deblox.puter.site)</a>
+              <p style="font-size:13px; color:var(--text-muted);">Play your real Deblox platform directly inside KittMobile.</p>
+            </div>
+          </div>` : "";
+
+        view.innerHTML = `
+          <div class="page-container">
+            <p style="color:var(--text-muted); margin-bottom:16px;">KittMobile results for <strong>${q}</strong></p>
+            ${debloxCard}
+            <div class="card">
+              <a class="link" href="${searchEngine}${encodeURIComponent(q)}" target="_blank">Search "${q}" on Live Web Search ↗</a>
+              <p style="font-size:13px; color:var(--text-muted);">Opens live search results for ${q} in a new tab.</p>
+            </div>
+            <div class="card">
+              <a class="link" href="https://www.youtube.com/results?search_query=${encodeURIComponent(q)}" target="_blank">Watch "${q}" on YouTube ↗</a>
+              <p style="font-size:13px; color:var(--text-muted);">Opens YouTube videos matching ${q}.</p>
+            </div>
+          </div>`;
+      } else if (url.startsWith("kitt://youtube")) {
+        tab.title = "YouTube - KittMobile";
+        tab.icon = KITTMOBILE_ICON_URI;
+        const vid = url.includes("?v=") ? url.split("?v=")[1] : "dQw4w9WgXcQ";
+        view.innerHTML = `
+          <div class="page-container" style="display:flex; flex-direction:column; height:100%;">
+            <div style="display:flex; gap:8px; margin-bottom:14px;">
+              <input type="text" id="ytInput" placeholder="Paste YouTube video link or 11-char ID..." style="flex:1; padding:10px 14px; border-radius:20px; border:1px solid var(--border); background:var(--bg-bar); color:var(--text-main); outline:none;" onkeydown="if(event.key==='Enter') navigateTo(this.value)">
+              <button class="action-btn primary" onclick="navigateTo(document.getElementById('ytInput').value)">Load Video</button>
+              <a class="action-btn" href="https://www.youtube.com/watch?v=${vid}" target="_blank" style="text-decoration:none;">Open YouTube ↗</a>
+            </div>
+            <iframe src="https://www.youtube-nocookie.com/embed/${vid}" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="flex:1; width:100%; border:none; border-radius:10px; background:#000;"></iframe>
+          </div>`;
+      } else if (url === "kitt://files") {
+        tab.title = "My Files";
+        tab.icon = KITTMOBILE_ICON_URI;
+        const list = uploadedFiles.length
+          ? uploadedFiles.map(f => `<div class="card" style="display:flex; justify-content:space-between;"><span>${f.name} (${f.size})</span><a href="${f.url}" download="${f.name}" style="color:var(--accent);">Download</a></div>`).join("")
+          : `<p style="color:var(--text-muted); margin-top:12px;">No files uploaded yet.</p>`;
+        view.innerHTML = `
+          <div class="page-container">
+            <h2 style="margin-bottom:12px;">📁 My Files</h2>
+            <input type="file" multiple onchange="handleFiles(event)">
+            <div style="margin-top:16px;">${list}</div>
+          </div>`;
+      } else if (url === "kitt://settings") {
+        tab.title = "KittMobile Settings";
+        tab.icon = KITTMOBILE_ICON_URI;
+        view.innerHTML = `
+          <div class="page-container">
+            <h2 style="margin-bottom:16px;">🔧 KittMobile Settings</h2>
+            <div class="card">
+              <p style="margin-bottom:10px;"><strong>Appearance</strong></p>
+              <button class="action-btn" onclick="document.body.classList.toggle('light-theme'); localStorage.setItem('kitt_theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');">Toggle Dark / Light Mode</button>
+            </div>
+            <div class="card">
+              <p style="margin-bottom:10px;"><strong>External Search Engine</strong></p>
+              <select onchange="searchEngine=this.value; saveState();" style="padding:8px; border-radius:6px;">
+                <option value="https://www.google.com/search?q=" ${searchEngine.includes('google')?'selected':''}>Google</option>
+                <option value="https://duckduckgo.com/?q=" ${searchEngine.includes('duckduckgo')?'selected':''}>DuckDuckGo</option>
+                <option value="https://www.bing.com/search?q=" ${searchEngine.includes('bing')?'selected':''}>Bing</option>
+              </select>
+            </div>
+          </div>`;
+      } else {
+        const isDeblox = url.toLowerCase().includes("deblox.puter.site");
+        tab.title = isDeblox ? "Deblox" : url.replace(/^https?:\/\//, "").split("/")[0];
+        tab.icon = isDeblox ? DEBLOX_ICON : KITTMOBILE_ICON_URI;
+
+        view.innerHTML = `
+          <div class="embed-wrapper">
+            <div class="embed-banner">
+              <span>Live Site: <strong>${url}</strong></span>
+              <a href="${url}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:600;">Open Fullscreen Tab ↗</a>
+            </div>
+            <iframe class="embed-frame" src="${url}" allow="fullscreen; microphone; camera; autoplay; clipboard-write" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-pointer-lock"></iframe>
+          </div>`;
+      }
+
+      document.getElementById("tabBar").innerHTML = tabs.map(t => `
+        <div class="tab ${t.id === activeTabId ? 'active' : ''}" onclick="activeTabId=${t.id}; render();">
+          <img class="tab-icon" src="${t.icon}" alt="">
+          <span class="tab-title">${t.title}</span>
+          <button class="close-tab" onclick="closeTab(event, ${t.id})">×</button>
+        </div>`).join("") + `<button class="new-tab-btn" onclick="createTab()" title="New Tab">+</button>`;
+    }
+
+    renderBookmarks();
+    createTab();
+  </script>
+</body>
+</html>
